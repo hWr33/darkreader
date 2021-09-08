@@ -845,9 +845,9 @@ describe('CSS VARIABLES OVERRIDE', () => {
         );
         createOrUpdateDynamicTheme(theme, null, false);
         await timeout(100);
-        expect(getComputedStyle(container.querySelector('.icon1')).backgroundImage).toMatch(/^url\("blob:.*"\)$/);
-        expect(getComputedStyle(container.querySelector('.icon2')).backgroundImage).toMatch(/^url\("blob:.*"\)$/);
-        expect(getComputedStyle(container.querySelector('.icon3')).backgroundImage).toMatch(/^url\("blob:.*"\), url\("blob:.*"\)$/);
+        expect(getComputedStyle(container.querySelector('.icon1')).backgroundImage).toMatch(/^url\("data:image\/svg\+xml;base64,.*"\)$/);
+        expect(getComputedStyle(container.querySelector('.icon2')).backgroundImage).toMatch(/^url\("data:image\/svg\+xml;base64,.*"\)$/);
+        expect(getComputedStyle(container.querySelector('.icon3')).backgroundImage).toMatch(/^url\("data:image\/svg\+xml;base64,.*"\), url\("data:image\/svg\+xml;base64,.*"\)$/);
     });
 
     it('should handle variables with gradients and images', async () => {
@@ -873,7 +873,7 @@ describe('CSS VARIABLES OVERRIDE', () => {
         );
         createOrUpdateDynamicTheme(theme, null, false);
         await timeout(100);
-        expect(getComputedStyle(container.querySelector('.icon')).backgroundImage).toMatch(/^url\("blob:.*"\), linear-gradient\(rgb\(204, 0, 0\), rgb\(0, 0, 0\)\)$/);
+        expect(getComputedStyle(container.querySelector('.icon')).backgroundImage).toMatch(/^url\("data:image\/svg\+xml;base64,.*"\), linear-gradient\(rgb\(204, 0, 0\), rgb\(0, 0, 0\)\)$/);
     });
 
     it('should handle asynchronous variable type resolution', async () => {
@@ -1156,5 +1156,20 @@ describe('CSS VARIABLES OVERRIDE', () => {
         } else {
             expect(updatedStyle.borderColor).toBe('rgb(0, 217, 0)');
         }
+    });
+
+    it('should add variables to root after the variable type is discovered', async () => {
+        document.documentElement.setAttribute('style', '--text: red;');
+        container.innerHTML = multiline(
+            '<style class="testcase-sheet">',
+            '</style>',
+            '<h1>Dependency variable</h1>',
+        );
+        createOrUpdateDynamicTheme(theme, null, false);
+        const sheet = (document.querySelector('.testcase-sheet') as HTMLStyleElement).sheet;
+        sheet.insertRule('h1 { color: var(--text);');
+
+        await timeout(0);
+        expect(getComputedStyle(document.querySelector('h1')).color).toBe('rgb(255, 26, 26)');
     });
 });
