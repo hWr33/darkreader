@@ -4,38 +4,44 @@ import type {News} from '../definitions';
 import {readSyncStorage, readLocalStorage, writeSyncStorage, writeLocalStorage} from './utils/extension-api';
 import {StateManager} from './utils/state-manager';
 
-export default class Newsmaker {
-    static UPDATE_INTERVAL = getDurationInMinutes({hours: 4});
-    static ALARM_NAME = 'newsmaker';
-    static LOCAL_STORAGE_KEY = 'Newsmaker-state';
+interface NewsmakerState {
+    latest: News[];
+    latestTimestamp: number;
+}
 
-    private stateManager: StateManager;
+export default class Newsmaker {
+    private static UPDATE_INTERVAL = getDurationInMinutes({hours: 4});
+    private static ALARM_NAME = 'newsmaker';
+    private static LOCAL_STORAGE_KEY = 'Newsmaker-state';
+
+    private stateManager: StateManager<NewsmakerState>;
     private latest: News[];
     private latestTimestamp: number;
-    async getLatest(): Promise<News[]> {
-        await this.stateManager.loadState();
-        return this.latest;
-    }
     onUpdate: (news: News[]) => void;
 
     constructor(onUpdate: (news: News[]) => void) {
-        this.stateManager = new StateManager(Newsmaker.LOCAL_STORAGE_KEY, this, {latest: [], latestTimestamp: null});
+        this.stateManager = new StateManager<NewsmakerState>(Newsmaker.LOCAL_STORAGE_KEY, this, {latest: [], latestTimestamp: null});
         this.latest = [];
         this.latestTimestamp = null;
         this.onUpdate = onUpdate;
     }
 
-    private async alarmListener(alarm: chrome.alarms.Alarm) {
-        if (alarm.name === Newsmaker.ALARM_NAME) {
-            await this.updateNews();
-        }
+    async getLatest(): Promise<News[]> {
+        await this.stateManager.loadState();
+        return this.latest;
     }
+
+    private alarmListener = (alarm: chrome.alarms.Alarm): void => {
+        if (alarm.name === Newsmaker.ALARM_NAME) {
+            this.updateNews();
+        }
+    };
 
     subscribe() {
         if ((this.latestTimestamp === null) || (this.latestTimestamp + Newsmaker.UPDATE_INTERVAL < Date.now())) {
             this.updateNews();
         }
-        chrome.alarms.onAlarm.addListener(this.alarmListener);
+        chrome.alarms.onAlarm.addListener((alarm) => this.alarmListener(alarm));
         chrome.alarms.create(Newsmaker.ALARM_NAME, {periodInMinutes: Newsmaker.UPDATE_INTERVAL});
     }
 

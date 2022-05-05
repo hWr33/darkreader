@@ -4,12 +4,11 @@ import {MessageType} from '../utils/message';
 
 export interface ExtensionAdapter {
     collect: () => Promise<ExtensionData>;
-    getActiveTabInfo: () => Promise<TabInfo>;
     changeSettings: (settings: Partial<UserSettings>) => void;
     setTheme: (theme: Partial<FilterConfig>) => void;
     setShortcut: ({command, shortcut}: {command: string; shortcut: string}) => void;
     markNewsAsRead: (ids: string[]) => Promise<void>;
-    toggleURL: (pattern: string) => void;
+    toggleActiveTab: () => void;
     onPopupOpen: () => void;
     loadConfig: (options: {local: boolean}) => Promise<void>;
     applyDevDynamicThemeFixes: (json: string) => Error;
@@ -27,14 +26,13 @@ export default class Messenger {
     constructor(adapter: ExtensionAdapter) {
         this.adapter = adapter;
         this.changeListenerCount = 0;
-        const allowedSenderURL = [chrome.runtime.getURL('/ui/popup/index.html'), chrome.runtime.getURL('/ui/devtools/index.html')];
-        chrome.runtime.onMessage.addListener((message: Message, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {
+        const allowedSenderURL = [chrome.runtime.getURL('/ui/popup/index.html'), chrome.runtime.getURL('/ui/devtools/index.html'), chrome.runtime.getURL('/ui/stylesheet-editor/index.html')];
+        chrome.runtime.onMessage.addListener((message: Message, sender: chrome.runtime.MessageSender, sendResponse: (response: {data?: ExtensionData | TabInfo; error?: string}) => void) => {
             if (allowedSenderURL.includes(sender.url)) {
                 this.onUIMessage(message, sendResponse);
                 this.adapter.onPopupOpen();
                 return ([
                     MessageType.UI_GET_DATA,
-                    MessageType.UI_GET_ACTIVE_TAB_INFO
                 ].includes(message.type));
             }
         });
@@ -46,9 +44,6 @@ export default class Messenger {
                 switch (port.name) {
                     case MessageType.UI_GET_DATA:
                         promise = this.adapter.collect();
-                        break;
-                    case MessageType.UI_GET_ACTIVE_TAB_INFO:
-                        promise = this.adapter.getActiveTabInfo();
                         break;
                     // These types require data, so we need to add a listener to the port.
                     case MessageType.UI_APPLY_DEV_DYNAMIC_THEME_FIXES:
@@ -88,14 +83,10 @@ export default class Messenger {
         }
     }
 
-    private onUIMessage({type, data}: Message, sendResponse: (response: any) => void) {
+    private onUIMessage({type, data}: Message, sendResponse: (response: {data?: ExtensionData | TabInfo; error?: string}) => void) {
         switch (type) {
             case MessageType.UI_GET_DATA: {
                 this.adapter.collect().then((data) => sendResponse({data}));
-                break;
-            }
-            case MessageType.UI_GET_ACTIVE_TAB_INFO: {
-                this.adapter.getActiveTabInfo().then((data) => sendResponse({data}));
                 break;
             }
             case MessageType.UI_SUBSCRIBE_TO_CHANGES: {
@@ -118,8 +109,8 @@ export default class Messenger {
                 this.adapter.setShortcut(data);
                 break;
             }
-            case MessageType.UI_TOGGLE_URL: {
-                this.adapter.toggleURL(data);
+            case MessageType.UI_TOGGLE_ACTIVE_TAB: {
+                this.adapter.toggleActiveTab();
                 break;
             }
             case MessageType.UI_MARK_NEWS_AS_READ: {

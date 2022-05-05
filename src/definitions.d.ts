@@ -1,12 +1,14 @@
+import type {ParsedColorSchemeConfig} from './utils/colorscheme-parser';
 import type {FilterMode} from './generators/css-filter';
 
 export interface ExtensionData {
     isEnabled: boolean;
     isReady: boolean;
     settings: UserSettings;
-    fonts: string[];
     news: News[];
     shortcuts: Shortcuts;
+    colorScheme: ParsedColorSchemeConfig;
+    forcedScheme: 'dark' | 'light';
     devtools: {
         dynamicFixesText: string;
         filterFixesText: string;
@@ -15,13 +17,19 @@ export interface ExtensionData {
         hasCustomFilterFixes: boolean;
         hasCustomStaticFixes: boolean;
     };
+    activeTab: TabInfo;
+}
+
+export interface TabData {
+    type: string;
+    data?: any;
 }
 
 export interface ExtensionActions {
     changeSettings(settings: Partial<UserSettings>): void;
     setTheme(theme: Partial<FilterConfig>): void;
     setShortcut(command: string, shortcut: string): void;
-    toggleURL(url: string): void;
+    toggleActiveTab(): void;
     markNewsAsRead(ids: string[]): void;
     loadConfig(options: {local: boolean}): void;
     applyDevDynamicThemeFixes(text: string): Promise<void>;
@@ -55,6 +63,9 @@ export interface Theme {
     scrollbarColor: '' | 'auto' | string;
     selectionColor: '' | 'auto' | string;
     styleSystemControls: boolean;
+    lightColorScheme: string;
+    darkColorScheme: string;
+    immediateModify: boolean;
 }
 
 export type FilterConfig = Theme;
@@ -84,11 +95,14 @@ export interface UserSettings {
     syncSettings: boolean;
     syncSitesFixes: boolean;
     automation: '' | 'time' | 'system' | 'location';
+    automationBehaviour: 'OnOff' | 'Scheme';
     time: TimeSettings;
     location: LocationSettings;
     previewNewDesign: boolean;
     enableForPDF: boolean;
     enableForProtectedPages: boolean;
+    enableContextMenus: boolean;
+    detectDarkTheme: boolean;
 }
 
 export interface TimeSettings {
@@ -106,6 +120,7 @@ export interface TabInfo {
     isProtected: boolean;
     isInjected: boolean;
     isInDarkList: boolean;
+    isDarkThemeDetected: boolean;
 }
 
 export interface Message {
@@ -125,6 +140,7 @@ export interface DynamicThemeFix {
     css: string;
     ignoreInlineStyle: string[];
     ignoreImageAnalysis: string[];
+    disableStyleSheetsProxy: boolean;
 }
 
 export interface InversionFix {
