@@ -1,7 +1,8 @@
-const WebSocket = require('ws');
-const {log} = require('./utils');
+import process from 'node:process';
+import {WebSocketServer} from 'ws';
+import {log} from './utils.js';
 
-const PORT = 8890;
+export const PORT = 8890;
 const WAIT_FOR_CONNECTION = 2000;
 
 /** @type {import('ws').Server} */
@@ -9,6 +10,7 @@ let server = null;
 
 /** @type {Set<WebSocket>} */
 const sockets = new Set();
+/** @type {WeakMap<WebSocket, number>} */
 const times = new WeakMap();
 
 /**
@@ -16,22 +18,23 @@ const times = new WeakMap();
  */
 function createServer() {
     return new Promise((resolve) => {
-        const server = new WebSocket.Server({port: PORT});
+        const server = new WebSocketServer({port: PORT});
         server.on('listening', () => {
             log.ok('Auto-reloader started');
             resolve(server);
         });
-        server.on('connection', async (ws) => {
+        server.on('connection', (ws) => {
+            log.ok('Extension connected');
             sockets.add(ws);
             times.set(ws, Date.now());
-            ws.on('message', async (data) => {
+            ws.on('message', (data) => {
                 const message = JSON.parse(data);
                 if (message.type === 'reloading') {
                     log.ok('Extension reloading...');
                 }
             });
             ws.on('close', () => sockets.delete(ws));
-            if (connectionAwaiter != null) {
+            if (connectionAwaiter !== null) {
                 connectionAwaiter();
             }
         });
@@ -78,7 +81,7 @@ function send(ws, message) {
  * @param {Object} options
  * @param {string} options.type
  */
-async function reload({type}) {
+export async function reload({type}) {
     if (!server) {
         server = await createServer();
     }
@@ -94,8 +97,6 @@ async function reload({type}) {
         .forEach((ws) => send(ws, {type}));
 }
 
-module.exports = reload;
-module.exports.PORT = PORT;
-module.exports.CSS = 'reload:css';
-module.exports.FULL = 'reload:full';
-module.exports.UI = 'reload:ui';
+export const CSS = 'reload:css';
+export const FULL = 'reload:full';
+export const UI = 'reload:ui';

@@ -2,7 +2,12 @@ import type {Theme} from '../../../definitions';
 import {isURLInList} from '../../../utils/url';
 import type {ViewProps} from '../types';
 
-export function getCurrentThemePreset(props: ViewProps) {
+interface ThemePresets {
+    theme: Theme;
+    change: (config: Partial<Theme>) => void;
+}
+
+export function getCurrentThemePreset(props: ViewProps): ThemePresets {
     const custom = props.data.settings.customThemes.find(
         ({url}) => isURLInList(props.data.activeTab.url, url)
     );
@@ -35,11 +40,10 @@ export function getCurrentThemePreset(props: ViewProps) {
         }
         if (
             config.mode != null &&
-            props.data.settings.automation &&
-            props.data.settings.automationBehaviour === 'Scheme'
+            props.data.settings.automation.behavior === 'Scheme'
         ) {
             props.actions.changeSettings({
-                automation: '',
+                automation: {...props.data.settings.automation, ...{enabled: false}},
             });
         }
     }

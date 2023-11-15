@@ -1,5 +1,5 @@
-const chokidar = require('chokidar');
-const {log} = require('./utils');
+import chokidar from 'chokidar';
+import {log} from './utils.js';
 
 const DEBOUNCE = 200;
 
@@ -15,7 +15,7 @@ function watch(options) {
     function onChange(path) {
         queue.add(path);
 
-        if (timeoutId != null) {
+        if (timeoutId !== null) {
             return;
         }
 
@@ -26,9 +26,6 @@ function watch(options) {
                 log.ok(`Files changed:${changedFiles.map((path) => `\n${path}`)}`);
                 queue.clear();
                 await options.onChange(changedFiles);
-                if (timeoutId) {
-                    return;
-                }
             } catch (err) {
                 log.error(err);
             }
@@ -50,4 +47,4 @@ function watch(options) {
     return watcher;
 }
 
-module.exports = watch;
+export default watch;

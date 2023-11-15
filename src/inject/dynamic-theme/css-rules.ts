@@ -1,9 +1,9 @@
 import {forEach} from '../../utils/array';
 import {isSafari} from '../../utils/platform';
 import {parseURL, getAbsoluteURL} from '../../utils/url';
-import {logInfo, logWarn} from '../../utils/log';
+import {logInfo, logWarn} from '../utils/log';
 
-export function iterateCSSRules(rules: CSSRuleList, iterate: (rule: CSSStyleRule) => void, onMediaRuleError?: () => void) {
+export function iterateCSSRules(rules: CSSRuleList, iterate: (rule: CSSStyleRule) => void, onMediaRuleError?: () => void): void {
     forEach(rules, (rule) => {
         // Don't rely on prototype or instanceof, they are slow implementations within the browsers.
         // However we can rely on certain properties to indentify which CSSRule we are dealing with.
@@ -12,7 +12,7 @@ export function iterateCSSRules(rules: CSSRuleList, iterate: (rule: CSSStyleRule
             iterate((rule as CSSStyleRule));
         } else if ((rule as CSSImportRule).href) {
             try {
-                iterateCSSRules((rule as CSSImportRule).styleSheet.cssRules, iterate, onMediaRuleError);
+                iterateCSSRules((rule as CSSImportRule).styleSheet!.cssRules, iterate, onMediaRuleError);
             } catch (err) {
                 logInfo(`Found a non-loaded link.`);
                 onMediaRuleError && onMediaRuleError();
@@ -54,7 +54,7 @@ const shorthandVarDepPropRegexps = isSafari ? shorthandVarDependantProperties.ma
     return [prop, regexp] as [string, RegExp];
 }) : null;
 
-export function iterateCSSDeclarations(style: CSSStyleDeclaration, iterate: (property: string, value: string) => void) {
+export function iterateCSSDeclarations(style: CSSStyleDeclaration, iterate: (property: string, value: string) => void): void {
     forEach(style, (property) => {
         const value = style.getPropertyValue(property).trim();
         if (!value) {
@@ -70,7 +70,7 @@ export function iterateCSSDeclarations(style: CSSStyleDeclaration, iterate: (pro
     if (cssText.includes('var(')) {
         if (isSafari) {
             // Safari doesn't show shorthand properties' values
-            shorthandVarDepPropRegexps.forEach(([prop, regexp]) => {
+            shorthandVarDepPropRegexps!.forEach(([prop, regexp]) => {
                 const match = cssText.match(regexp);
                 if (match && match[1]) {
                     const val = match[1].trim();
@@ -88,26 +88,30 @@ export function iterateCSSDeclarations(style: CSSStyleDeclaration, iterate: (pro
     }
 }
 
-export const cssURLRegex = /url\((('.+?')|(".+?")|([^\)]*?))\)/g;
+export const cssURLRegex = /url\((('.*?')|(".*?")|([^\)]*?))\)/g;
 export const cssImportRegex = /@import\s*(url\()?(('.+?')|(".+?")|([^\)]*?))\)? ?(screen)?;?/gi;
 
-export function getCSSURLValue(cssURL: string) {
-    return cssURL.replace(/^url\((.*)\)$/, '$1').trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+// First try to extract the CSS URL value. Then do some post fixes, like unescaping
+// backslashes in the URL. (Chromium don't handle this natively). Remove all newlines
+// beforehand, otherwise `.` will fail matching the content within the url, as it
+// doesn't match any linebreaks.
+export function getCSSURLValue(cssURL: string): string {
+    return cssURL.trim().replace(/[\n\r\\]+/g, '').replace(/^url\((.*)\)$/, '$1').trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').replace(/(?:\\(.))/g, '$1');
 }
 
-export function getCSSBaseBath(url: string) {
+export function getCSSBaseBath(url: string): string {
     const cssURL = parseURL(url);
     return `${cssURL.origin}${cssURL.pathname.replace(/\?.*$/, '').replace(/(\/)([^\/]+)$/i, '$1')}`;
 }
 
-export function replaceCSSRelativeURLsWithAbsolute($css: string, cssBasePath: string) {
+export function replaceCSSRelativeURLsWithAbsolute($css: string, cssBasePath: string): string {
     return $css.replace(cssURLRegex, (match) => {
         const pathValue = getCSSURLValue(match);
         // Sites can have any kind of specified URL, thus also invalid ones.
         // To prevent the whole operation from failing, let's just skip those
         // invalid URL's and let them be invalid.
         try {
-            return `url("${getAbsoluteURL(cssBasePath, pathValue)}")`;
+            return `url('${getAbsoluteURL(cssBasePath, pathValue)}')`;
         } catch (err) {
             logWarn('Not able to replace relative URL with Absolute URL, skipping');
             return match;
@@ -117,12 +121,12 @@ export function replaceCSSRelativeURLsWithAbsolute($css: string, cssBasePath: st
 
 const cssCommentsRegex = /\/\*[\s\S]*?\*\//g;
 
-export function removeCSSComments($css: string) {
+export function removeCSSComments($css: string): string {
     return $css.replace(cssCommentsRegex, '');
 }
 
 const fontFaceRegex = /@font-face\s*{[^}]*}/g;
 
-export function replaceCSSFontFace($css: string) {
+export function replaceCSSFontFace($css: string): string {
     return $css.replace(fontFaceRegex, '');
 }

@@ -27,9 +27,8 @@ export default function SiteListSettings({data, actions, isFocused}: SiteListSet
                 values={data.settings.siteList}
                 isFocused={isFocused}
                 onChange={(values) => {
-                    if (values.every(isSiteUrlValid)) {
-                        actions.changeSettings({siteList: values});
-                    }
+                    const siteList = values.filter(isSiteUrlValid);
+                    actions.changeSettings({siteList});
                 }}
             />
             <Shortcut

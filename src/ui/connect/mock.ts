@@ -1,9 +1,11 @@
+import {ThemeEngine} from '../../generators/theme-engines';
 import type {ExtensionData, Theme, UserSettings} from '../../definitions';
 
 export function getMockData(override = {} as Partial<ExtensionData>): ExtensionData {
     return Object.assign({
         isEnabled: true,
         isReady: true,
+        isAllowedFileSchemeAccess: false,
         settings: {
             enabled: true,
             fetchNews: true,
@@ -17,7 +19,7 @@ export function getMockData(override = {} as Partial<ExtensionData>): ExtensionD
                 useFont: false,
                 fontFamily: 'Segoe UI',
                 textStroke: 0,
-                engine: 'cssFilter',
+                engine: ThemeEngine.cssFilter,
                 stylesheet: '',
                 scrollbarColor: 'auto',
                 styleSystemControls: true,
@@ -25,13 +27,18 @@ export function getMockData(override = {} as Partial<ExtensionData>): ExtensionD
             customThemes: [],
             siteList: [],
             siteListEnabled: [],
+            syncSitesFixes: false,
+            enableContextMenus: false,
             applyToListedOnly: false,
             changeBrowserTheme: false,
             enableForPDF: true,
             enableForProtectedPages: false,
             syncSettings: true,
-            automation: '',
-            automationBehaviour: 'OnOff',
+            automation: {
+                enabled: false,
+                behavior: 'OnOff',
+                mode: '',
+            },
             previewNewDesign: false,
             time: {
                 activation: '18:00',
@@ -49,20 +56,17 @@ export function getMockData(override = {} as Partial<ExtensionData>): ExtensionD
             'monospace',
             'cursive',
             'fantasy',
-            'system-ui'
+            'system-ui',
         ],
         news: [],
         shortcuts: {
             'addSite': 'Alt+Shift+A',
-            'toggle': 'Alt+Shift+D'
+            'toggle': 'Alt+Shift+D',
         },
         devtools: {
             dynamicFixesText: '',
             filterFixesText: '',
             staticThemesText: '',
-            hasCustomDynamicFixes: false,
-            hasCustomFilterFixes: false,
-            hasCustomStaticFixes: false,
         },
         colorScheme: {
             dark: {
@@ -80,11 +84,14 @@ export function getMockData(override = {} as Partial<ExtensionData>): ExtensionD
         },
         forcedScheme: null,
         activeTab: {
+            id: 1,
+            documentId: 'id',
             url: 'https://darkreader.org/',
             isProtected: false,
             isInDarkList: false,
             isInjected: true,
             isDarkThemeDetected: false,
         },
+        uiHighlights: [],
     } as ExtensionData, override);
 }
